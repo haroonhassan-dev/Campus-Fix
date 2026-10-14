@@ -20,6 +20,7 @@ import ComplaintFilters from './components/ComplaintFilters';
 import ComplaintList from './components/ComplaintList';
 import ComplaintForm from './components/ComplaintForm';
 import ComplaintDetailModal from './components/ComplaintDetailModal';
+import ReportsPanel from './features/reports/ReportsPanel';
 
 const initialFilterState: FilterState = {
   search: '',
@@ -40,7 +41,7 @@ export function App() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'submit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'submit' | 'reports'>('dashboard');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -452,6 +453,11 @@ export function App() {
               />
             </div>
           )}
+
+          {/* Reports & Analytics Tab */}
+          {activeTab === 'reports' && (
+            <ReportsPanel complaints={complaints} />
+          )}
         </main>
       </div>
 
@@ -484,9 +490,9 @@ export function App() {
             <span>— University Facility Resolution System</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
-            <span>Frontend Reliability Edition</span>
+            <span>CampusFix System</span>
             <span>•</span>
-            <span>In-Memory Visual Simulation</span>
+            <span>Browser Local Storage</span>
           </div>
         </div>
       </footer>

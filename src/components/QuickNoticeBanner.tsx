@@ -1,9 +1,8 @@
 import { useState } from 'react';
 
 /**
- * Notice banner clearly stating the visual development state
- * per project instructions: "You may temporarily use sample data for visual development,
- * but do not claim persistence works until the real data layer is integrated."
+ * Notice banner explaining browser-local storage persistence.
+ * Data is saved locally in the user's browser and is not shared across devices.
  */
 export function QuickNoticeBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -14,7 +13,7 @@ export function QuickNoticeBanner() {
     <div
       id="dev-mode-notice-banner"
       role="region"
-      aria-label="Development environment notice"
+      aria-label="Local storage persistence notice"
       className="relative overflow-hidden border-b border-indigo-100 bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-purple-50/80 px-4 py-3 text-xs sm:text-sm text-indigo-950 backdrop-blur-sm"
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
@@ -36,9 +35,9 @@ export function QuickNoticeBanner() {
           </span>
           <p className="leading-snug">
             <strong className="font-semibold text-indigo-900">
-              Frontend Development Mode:
+              Local Storage Mode:
             </strong>{' '}
-            Interactive visual simulation with sample data. Submitted and updated complaints are held in-memory for testing; full database persistence activates once the backend layer is integrated.
+            Complaints and status updates are saved locally in your browser and persist across page reloads. Data is stored on this device and is not shared across other devices or browsers.
           </p>
         </div>
 
