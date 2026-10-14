@@ -114,26 +114,42 @@ export function exportComplaintsToCsv(
     return false;
   }
 
+  let downloadAnchor: HTMLAnchorElement | null = null;
+  let url: string | null = null;
+
   try {
     const csvContent = generateComplaintsCsv(complaints);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
+    url = URL.createObjectURL(blob);
 
+    downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', url);
     downloadAnchor.setAttribute('download', filename);
     downloadAnchor.style.display = 'none';
 
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
-    document.body.removeChild(downloadAnchor);
-
-    // Clean up allocated object URL
-    URL.revokeObjectURL(url);
     return true;
   } catch (error) {
     console.error('Failed to trigger CSV export:', error);
     return false;
+  } finally {
+    // Ensure temporary DOM element is reliably cleaned up even if an exception occurs
+    if (downloadAnchor && downloadAnchor.parentNode) {
+      downloadAnchor.parentNode.removeChild(downloadAnchor);
+    }
+
+    // Safely delay object URL revocation to give the browser asynchronous download pipeline time to start
+    if (url) {
+      const allocatedUrl = url;
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(allocatedUrl);
+        } catch {
+          // Ignore revocation errors if URL is already disposed
+        }
+      }, 1000);
+    }
   }
 }
 

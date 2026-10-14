@@ -85,15 +85,23 @@ export function formatResolutionPercentage(percentage: number, decimals: number 
 
 /**
  * Computes complaint counts grouped by category.
+ * Uses a prototype-safe collection (Map and Object.create(null)) to ensure
+ * arbitrary category values (such as '__proto__', 'constructor', 'toString')
+ * cannot collide with or corrupt Object prototype properties.
  *
  * @param complaints - Array of complaints to evaluate
- * @returns Record of category names to numeric counts
+ * @returns Prototype-safe Record of category names to numeric counts
  */
 export function getComplaintCountsByCategory(complaints: Complaint[]): Record<string, number> {
-  const counts: Record<string, number> = {};
+  const countsMap = new Map<string, number>();
   for (const complaint of complaints) {
     const category = complaint.category?.trim() || 'Uncategorized';
-    counts[category] = (counts[category] ?? 0) + 1;
+    countsMap.set(category, (countsMap.get(category) ?? 0) + 1);
+  }
+
+  const counts: Record<string, number> = Object.create(null);
+  for (const [category, count] of countsMap.entries()) {
+    counts[category] = count;
   }
   return counts;
 }

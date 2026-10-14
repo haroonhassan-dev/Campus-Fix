@@ -74,10 +74,13 @@ All calculation functions are pure, deterministic, and safe against empty arrays
 | `getResolvedComplaints` | `(complaints: Complaint[]) => number` | Number of complaints with `status: 'resolved'` | Returns `0` |
 | `getResolutionPercentage` | `(complaints: Complaint[]) => number` | Exact `(resolved / total) * 100` float | Returns `0` (never `NaN`) |
 | `formatResolutionPercentage`| `(pct: number, decimals?: number) => string` | Formatted string (e.g. `"25%"`) | Returns `"0%"` |
-| `getComplaintCountsByCategory`| `(complaints: Complaint[]) => Record<string, number>` | Counts mapped by category name | Returns `{}` |
+| `getComplaintCountsByCategory`| `(complaints: Complaint[]) => Record<string, number>` | Prototype-safe counts mapped by category name | Returns `{}` (`Object.create(null)`) |
 | `getComplaintCountsByPriority`| `(complaints: Complaint[]) => Record<ComplaintPriority, number>` | Counts for `urgent`, `high`, `medium`, `low` | All keys default to `0` |
 | `getComplaintCountsByStatus`| `(complaints: Complaint[]) => Record<ComplaintStatus, number>` | Counts for `pending`, `in-progress`, `resolved` | All keys default to `0` |
 | `generateReportSummary` | `(complaints: Complaint[]) => ReportSummary` | Single-pass aggregate of all metrics & distributions | Complete zeroed summary |
+
+> [!NOTE]
+> **Prototype Collision Protection**: `getComplaintCountsByCategory` aggregates counts into a `Map<string, number>` and returns a null-prototype dictionary (`Object.create(null)`). This guarantees that arbitrary category values (such as `__proto__`, `constructor`, or `toString`) cannot collide with, read, or pollute the JavaScript `Object` prototype.
 
 ---
 
@@ -121,6 +124,7 @@ In spreadsheet programs (Excel, LibreOffice, Google Sheets), cell values startin
 - Escapes internal double quotes by doubling them (`""`).
 - Safely handles multiline descriptions and embedded commas.
 - Uses native browser `Blob`, `URL.createObjectURL`, and temporary anchor click download; zero third-party dependencies.
+- **Robust Download Lifecycle & DOM Cleanup**: Temporary `<a>` download elements are inserted and cleaned up within a `finally` block to guarantee DOM hygiene even if exceptions occur. Revocation of the created blob URL via `URL.revokeObjectURL` is safely deferred with `setTimeout` to give asynchronous browser download engines sufficient time to stream the file payload before invalidation.
 
 ---
 
