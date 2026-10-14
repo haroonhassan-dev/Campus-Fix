@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AddComplaintInput, Complaint, ComplaintPriority } from '../types/frontend';
 import { CATEGORIES } from '../data/mockComplaints';
 
@@ -47,17 +47,103 @@ export function ComplaintForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdTicket, setCreatedTicket] = useState<Complaint | null>(null);
 
-  // Close on ESC if in modal mode
+  // References for focus management
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  // Modal focus management: store trigger element on mount and restore on unmount
   useEffect(() => {
-    if (!isModal || !onSuccessClose) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isSubmitting) {
-        onSuccessClose();
+    if (isModal) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      return () => {
+        const trigger = previousFocusRef.current;
+        if (trigger && typeof trigger.focus === 'function') {
+          trigger.focus();
+          setTimeout(() => {
+            if (document.activeElement === document.body && trigger && typeof trigger.focus === 'function') {
+              trigger.focus();
+            }
+          }, 0);
+        }
+      };
+    }
+  }, [isModal]);
+
+  // Modal focus management: move focus into the modal when opened or when confirmation appears
+  useEffect(() => {
+    if (!isModal) return;
+
+    const focusInside = () => {
+      if (!modalRef.current) return;
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        modalRef.current.focus();
       }
     };
+
+    focusInside();
+    const frameId = requestAnimationFrame(focusInside);
+    return () => cancelAnimationFrame(frameId);
+  }, [isModal, createdTicket]);
+
+  // Modal focus trap (Tab/Shift+Tab) and Escape dismissal
+  useEffect(() => {
+    if (!isModal) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape closes modal when submission is not in progress
+      if (e.key === 'Escape') {
+        if (!isSubmitting && onSuccessClose) {
+          e.preventDefault();
+          onSuccessClose();
+        }
+        return;
+      }
+
+      // Tab trap
+      if (e.key === 'Tab') {
+        if (!modalRef.current) return;
+
+        const focusableElements = Array.from(
+          modalRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => {
+          if (el.getAttribute('aria-hidden') === 'true') return false;
+          if (el.offsetParent !== null || el.offsetWidth > 0 || el.offsetHeight > 0) return true;
+          const style = window.getComputedStyle(el);
+          return style.display !== 'none' && style.visibility !== 'hidden';
+        });
+
+        if (focusableElements.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement || !modalRef.current.contains(document.activeElement)) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement || !modalRef.current.contains(document.activeElement)) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModal, onSuccessClose, isSubmitting]);
+  }, [isModal, isSubmitting, onSuccessClose, createdTicket]);
 
   // Single field validator
   const validateField = useCallback(
@@ -205,83 +291,81 @@ export function ComplaintForm({
     setCreatedTicket(null);
   };
 
-  // Success Confirmation Screen
-  if (createdTicket) {
-    return (
-      <div
-        id="ticket-success-screen"
-        role="region"
-        aria-label="Submission confirmation"
-        className="rounded-3xl border border-emerald-200 bg-white p-6 sm:p-8 text-center shadow-lg dark:border-emerald-800/60 dark:bg-slate-900"
-      >
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
+  // Success Confirmation Screen Content
+  const successContent = createdTicket && (
+    <div
+      id="ticket-success-screen"
+      role="region"
+      aria-label="Submission confirmation"
+      className="rounded-3xl border border-emerald-200 bg-white p-6 sm:p-8 text-center shadow-lg dark:border-emerald-800/60 dark:bg-slate-900"
+    >
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+        <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+
+      <h3 id="ticket-success-title" className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+        Complaint Submitted Successfully!
+      </h3>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Your issue has been recorded and queued for the Campus Facilities maintenance team.
+      </p>
+
+      {/* Ticket Reference Summary */}
+      <div className="mx-auto mt-6 max-w-md rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left dark:border-slate-800 dark:bg-slate-800/60">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Assigned Ticket ID
+          </span>
+          <span className="font-mono text-base font-extrabold text-blue-600 dark:text-blue-400">
+            {createdTicket.id}
+          </span>
         </div>
-
-        <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          Complaint Submitted Successfully!
-        </h3>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Your issue has been recorded and queued for the Campus Facilities maintenance team.
-        </p>
-
-        {/* Ticket Reference Summary */}
-        <div className="mx-auto mt-6 max-w-md rounded-2xl border border-slate-200 bg-slate-50 p-5 text-left dark:border-slate-800 dark:bg-slate-800/60">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Assigned Ticket ID
+        <div className="mt-3 space-y-2 text-xs">
+          <p>
+            <strong className="text-slate-700 dark:text-slate-300">Title:</strong>{' '}
+            <span className="text-slate-900 dark:text-slate-100 font-medium">{createdTicket.title}</span>
+          </p>
+          <p>
+            <strong className="text-slate-700 dark:text-slate-300">Location:</strong>{' '}
+            <span className="text-slate-600 dark:text-slate-400">{createdTicket.location}</span>
+          </p>
+          <p>
+            <strong className="text-slate-700 dark:text-slate-300">Category:</strong>{' '}
+            <span className="text-slate-600 dark:text-slate-400">{createdTicket.category}</span>
+          </p>
+          <p>
+            <strong className="text-slate-700 dark:text-slate-300">Priority:</strong>{' '}
+            <span className="capitalize font-semibold text-slate-800 dark:text-slate-200">
+              {createdTicket.priority}
             </span>
-            <span className="font-mono text-base font-extrabold text-blue-600 dark:text-blue-400">
-              {createdTicket.id}
-            </span>
-          </div>
-          <div className="mt-3 space-y-2 text-xs">
-            <p>
-              <strong className="text-slate-700 dark:text-slate-300">Title:</strong>{' '}
-              <span className="text-slate-900 dark:text-slate-100 font-medium">{createdTicket.title}</span>
-            </p>
-            <p>
-              <strong className="text-slate-700 dark:text-slate-300">Location:</strong>{' '}
-              <span className="text-slate-600 dark:text-slate-400">{createdTicket.location}</span>
-            </p>
-            <p>
-              <strong className="text-slate-700 dark:text-slate-300">Category:</strong>{' '}
-              <span className="text-slate-600 dark:text-slate-400">{createdTicket.category}</span>
-            </p>
-            <p>
-              <strong className="text-slate-700 dark:text-slate-300">Priority:</strong>{' '}
-              <span className="capitalize font-semibold text-slate-800 dark:text-slate-200">
-                {createdTicket.priority}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button
-            id="btn-submit-another"
-            type="button"
-            onClick={handleReset}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 min-h-[44px]"
-          >
-            Submit Another Complaint
-          </button>
-          {onSuccessClose && (
-            <button
-              id="btn-view-in-dashboard"
-              type="button"
-              onClick={onSuccessClose}
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 min-h-[44px]"
-            >
-              View in Complaints List
-            </button>
-          )}
+          </p>
         </div>
       </div>
-    );
-  }
+
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <button
+          id="btn-submit-another"
+          type="button"
+          onClick={handleReset}
+          className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 min-h-[44px]"
+        >
+          Submit Another Complaint
+        </button>
+        {onSuccessClose && (
+          <button
+            id="btn-view-in-dashboard"
+            type="button"
+            onClick={onSuccessClose}
+            className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 min-h-[44px]"
+          >
+            View in Complaints List
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   const formContent = (
     <form
@@ -643,46 +727,82 @@ export function ComplaintForm({
         className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-form-title"
+        aria-labelledby={createdTicket ? 'ticket-success-title' : 'modal-form-title'}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !isSubmitting && onSuccessClose) {
+            onSuccessClose();
+          }
+        }}
       >
-        <div className="relative my-auto w-full max-w-2xl max-h-[92vh] flex flex-col rounded-3xl border border-slate-200 bg-white p-5 sm:p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
-            <div>
-              <h2 id="modal-form-title" className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Submit a Campus Facility Issue
-              </h2>
-              <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                Report equipment defects, infrastructure damage, safety issues, or maintenance needs.
-              </p>
+        <div
+          ref={modalRef}
+          tabIndex={-1}
+          className="relative my-auto w-full max-w-2xl max-h-[92vh] flex flex-col rounded-3xl border border-slate-200 bg-white p-5 sm:p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900 overflow-hidden outline-none"
+        >
+          {createdTicket ? (
+            // Success confirmation kept cleanly inside the modal
+            <div className="overflow-y-auto pt-2">
+              {onSuccessClose && (
+                <button
+                  id="btn-modal-success-close-x"
+                  type="button"
+                  onClick={onSuccessClose}
+                  className="absolute right-5 top-5 rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 min-h-[36px] min-w-[36px] flex items-center justify-center z-10"
+                  aria-label="Close dialog"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              {successContent}
             </div>
+          ) : (
+            // Form view inside the modal
+            <>
+              {/* Header */}
+              <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                <div>
+                  <h2 id="modal-form-title" className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Submit a Campus Facility Issue
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    Report equipment defects, infrastructure damage, safety issues, or maintenance needs.
+                  </p>
+                </div>
 
-            {onSuccessClose && (
-              <button
-                id="btn-modal-close-x"
-                type="button"
-                disabled={isSubmitting}
-                onClick={onSuccessClose}
-                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                aria-label="Close dialog"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
+                {onSuccessClose && (
+                  <button
+                    id="btn-modal-close-x"
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={onSuccessClose}
+                    className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                    aria-label="Close dialog"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
-          {/* Scrollable form body */}
-          <div className="overflow-y-auto pt-4 pr-1">
-            {formContent}
-          </div>
+              {/* Scrollable form body */}
+              <div className="overflow-y-auto pt-4 pr-1">
+                {formContent}
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
   // Standalone card view (e.g. for dedicated tab)
+  if (createdTicket) {
+    return successContent;
+  }
+
   return (
     <div
       id="complaint-form-container"

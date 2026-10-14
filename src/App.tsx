@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type {
   Complaint,
   AddComplaintInput,
@@ -49,14 +49,31 @@ export function App() {
     message: string;
     type: 'success' | 'error' | 'info';
   } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up active toast timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   // Show transient notification toast with accessible role
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    // Clear any prior active timeout so older notifications cannot dismiss newer ones
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+
     setToast({ message, type });
-    const timer = setTimeout(() => {
+
+    toastTimerRef.current = setTimeout(() => {
       setToast(null);
+      toastTimerRef.current = null;
     }, 4000);
-    return () => clearTimeout(timer);
   }, []);
 
   // Fetch complaints on component mount using the agreed getComplaints() function
@@ -271,8 +288,14 @@ export function App() {
           <span className="flex-1">{toast.message}</span>
           <button
             type="button"
-            onClick={() => setToast(null)}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded"
+            onClick={() => {
+              if (toastTimerRef.current) {
+                clearTimeout(toastTimerRef.current);
+                toastTimerRef.current = null;
+              }
+              setToast(null);
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded focus-visible:ring-2 focus-visible:ring-blue-600"
             aria-label="Dismiss notification"
           >
             ✕

@@ -54,14 +54,26 @@ The complaint submission form enforces validation before submission and provides
 ### D. Accessibility (a11y) & Keyboard Navigation
 - **Skip Navigation**: Added hidden "Skip to main content" link accessible via keyboard `Tab` focusing directly onto `#main-content`.
 - **Visible Focus Outlines**: Global `:focus-visible` styling (`outline: 2px solid #2563eb; outline-offset: 2px`) configured in `index.css`.
-- **Keyboard Dismissal**: Modals and the mobile navigation drawer close on `Escape`.
+- **Modal Focus Management**:
+  - **Initial Focus**: Automatically moves focus into the modal (`first focusable element` or modal container) when opened, and transitions focus smoothly when switching to the confirmation state.
+  - **Focus Trapping**: Constrains keyboard `Tab` and `Shift+Tab` strictly within the modal boundaries, cycling seamlessly between interactive elements without focus escaping into background content.
+  - **Focus Restoration**: Captures the invoking trigger element (`document.activeElement`) on modal mount and returns focus cleanly to it upon dialog unmount.
+  - **Escape Dismissal Guard**: Supports closing via `Escape` key and outside backdrop clicks only when submission is not in progress (`!isSubmitting`).
+- **Submission Confirmation within Modal**:
+  - When `isModal={true}`, successful submission confirmation (`#ticket-success-screen`) remains cleanly rendered within the modal container (`#modal-complaint-submission`) with backdrop, close button, and focus trap active.
+  - Preserves standalone form behavior when `isModal={false}`, rendering the confirmation card inline within the page layout.
 - **ARIA Semantics**:
-  - `role="dialog"` and `aria-modal="true"` for overlay dialogs.
+  - `role="dialog"` and `aria-modal="true"` for overlay dialogs (`aria-labelledby` dynamic between form and confirmation titles).
   - `role="search"` and `type="search"` on search filters.
   - `role="status"` and `role="alert"` on feedback toasts and error alerts.
   - `aria-pressed` on filter tabs and view mode switchers.
 
-### E. User Feedback for Failed Operations
+### E. User Feedback for Failed Operations & Notification Reliability
+- **Toast Timer Lifecycle Management**:
+  - Utilizes a React `useRef` to track active auto-dismiss timeouts.
+  - Clears existing timers prior to scheduling new toast notifications, preventing race conditions where older notification timeouts prematurely dismiss newer toasts.
+  - Performs cleanup of active timers on component unmount to prevent state updates on unmounted trees.
+  - Provides instant manual dismissal with explicit timer cancellation.
 - **Data Load Recovery**: If the initial data retrieval fails, an accessible alert banner displays the error reason and provides a **"Retry Loading"** action button.
 - **Operation Feedback**: Toast system handles `'success'`, `'error'`, and `'info'` states with distinct visual indicators and manual dismiss buttons.
 - **Submission Error Alert**: If submission fails, an inline alert banner displays the failure reason and allows the user to correct or retry without losing entered form data.
@@ -88,5 +100,10 @@ No modifications were made to shared types, mock data, or backend-owned files, p
   - Validated on-blur error messages for short titles, invalid email formats, and character counts.
   - Verified valid submissions containing hyphenated Student ID (`FA24-BSE-109`) and `.edu.pk` email addresses.
   - Confirmed submission button disables during processing and displays ticket confirmation screen upon completion.
+  - Verified in-modal confirmation presentation without modal dismantling or layout jumping.
+  - Verified modal focus trap prevents `Tab` from escaping modal container and tested `Shift+Tab` reverse wrapping.
+  - Verified `Escape` dismisses modal when idle and is blocked during active submission.
+  - Verified focus returns to the initiating trigger button upon modal closing.
+  - Tested toast timer replacement so rapid successive notifications remain visible for the full timeout duration.
   - Tested mobile drawer open/close behavior, outside backdrop click dismiss, and ESC key listener.
   - Tested keyboard tab navigation through skip link, filter buttons, and dialogs.
