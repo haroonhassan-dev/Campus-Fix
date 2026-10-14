@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type {
   Complaint,
   AddComplaintInput,
@@ -39,12 +39,25 @@ const priorityWeight: Record<string, number> = {
 export function App() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'submit'>('dashboard');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<Complaint | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
+
+  // Show transient notification toast with accessible role
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch complaints on component mount using the agreed getComplaints() function
   useEffect(() => {
@@ -58,30 +71,47 @@ export function App() {
       })
       .catch((err) => {
         if (!ignore) {
-          console.error('Failed to load complaints:', err);
+          const msg = err instanceof Error ? err.message : 'Unable to retrieve complaints data.';
+          setLoadError(msg);
           setIsLoading(false);
+          showToast(msg, 'error');
         }
       });
 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [showToast]);
 
-  // Show transient notification toast
-  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 3500);
+  // Manual retry handler invoked by user action
+  const handleRetry = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    getComplaints()
+      .then((data) => {
+        setComplaints(data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : 'Unable to retrieve complaints data.';
+        setLoadError(msg);
+        setIsLoading(false);
+        showToast(msg, 'error');
+      });
   };
 
   // Add a new complaint using the agreed addComplaint(input) function
   const handleAddComplaint = async (input: AddComplaintInput): Promise<Complaint> => {
-    const created = await addComplaint(input);
-    setComplaints((prev) => [created, ...prev]);
-    showToast(`Ticket ${created.id} submitted successfully!`);
-    return created;
+    try {
+      const created = await addComplaint(input);
+      setComplaints((prev) => [created, ...prev]);
+      showToast(`Ticket ${created.id} submitted successfully!`, 'success');
+      return created;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit complaint. Please try again.';
+      showToast(msg, 'error');
+      throw err;
+    }
   };
 
   // Update status using the agreed updateComplaintStatus(id, status) function
@@ -94,22 +124,27 @@ export function App() {
       if (selectedDetail && selectedDetail.id === id) {
         setSelectedDetail(updated);
       }
-      showToast(`Ticket ${id} status updated to ${newStatus.toUpperCase()}`);
+      showToast(`Ticket ${id} status updated to ${newStatus.toUpperCase()}`, 'success');
     } catch (err) {
-      console.error('Status update error:', err);
+      const msg = err instanceof Error ? err.message : 'Status update failed';
+      showToast(`Could not update ticket ${id}: ${msg}`, 'error');
     }
   };
 
   // Handle upvoting
   const handleUpvote = (id: string) => {
-    const updated = toggleUpvote(id);
-    if (updated) {
-      setComplaints((prev) =>
-        prev.map((item) => (item.id === id ? updated : item))
-      );
-      if (selectedDetail && selectedDetail.id === id) {
-        setSelectedDetail(updated);
+    try {
+      const updated = toggleUpvote(id);
+      if (updated) {
+        setComplaints((prev) =>
+          prev.map((item) => (item.id === id ? updated : item))
+        );
+        if (selectedDetail && selectedDetail.id === id) {
+          setSelectedDetail(updated);
+        }
       }
+    } catch (err) {
+      console.error('Upvote error:', err);
     }
   };
 
@@ -199,18 +234,49 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100 flex flex-col justify-between">
-      {/* Toast Notification */}
+      {/* Skip to Main Content Link for Keyboard / Screen Readers */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2.5 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white font-semibold text-xs"
+      >
+        Skip to main content
+      </a>
+
+      {/* Accessible Toast Notification System */}
       {toast && (
         <div
           id="toast-notification"
-          role="status"
+          role={toast.type === 'error' ? 'alert' : 'status'}
           aria-live="polite"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-2xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 animate-in slide-in-from-bottom-5"
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-2xl animate-in slide-in-from-bottom-5 max-w-md ${
+            toast.type === 'error'
+              ? 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100'
+              : toast.type === 'info'
+              ? 'border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100'
+              : 'border-emerald-300 bg-white text-slate-900 dark:border-emerald-800 dark:bg-slate-900 dark:text-slate-100'
+          }`}
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-            ✓
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white text-xs ${
+              toast.type === 'error'
+                ? 'bg-rose-600'
+                : toast.type === 'info'
+                ? 'bg-blue-600'
+                : 'bg-emerald-500'
+            }`}
+            aria-hidden="true"
+          >
+            {toast.type === 'error' ? '!' : toast.type === 'info' ? 'i' : '✓'}
           </span>
-          <span>{toast.message}</span>
+          <span className="flex-1">{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -227,7 +293,31 @@ export function App() {
         />
 
         {/* Main Application Container */}
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8 outline-none">
+          {/* Load Error State Banner */}
+          {loadError && (
+            <div
+              role="alert"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-200"
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-600 text-white font-bold text-xs" aria-hidden="true">
+                  !
+                </span>
+                <p>
+                  <strong className="font-semibold">Unable to load complaints:</strong> {loadError}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="self-start sm:self-auto rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 focus-visible:ring-2 focus-visible:ring-rose-500 transition-colors"
+              >
+                Retry Loading
+              </button>
+            </div>
+          )}
+
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="space-y-8">
@@ -258,7 +348,7 @@ export function App() {
                     id="btn-switch-to-list-view"
                     type="button"
                     onClick={() => setActiveTab('list')}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 self-start sm:self-auto"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 self-start sm:self-auto focus-visible:ring-2 focus-visible:ring-blue-600 rounded p-1"
                   >
                     Open Full Filtered View →
                   </button>
@@ -371,9 +461,9 @@ export function App() {
             <span>— University Facility Resolution System</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
-            <span>Frontend Visual Preview</span>
+            <span>Frontend Reliability Edition</span>
             <span>•</span>
-            <span>Contracts: getComplaints | addComplaint | updateComplaintStatus</span>
+            <span>In-Memory Visual Simulation</span>
           </div>
         </div>
       </footer>

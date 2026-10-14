@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface NavbarProps {
   activeTab: 'dashboard' | 'list' | 'submit';
@@ -15,8 +15,20 @@ export function Navbar({
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Close mobile drawer on ESC key
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 shadow-xs">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 shadow-xs">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand / Logo */}
         <div className="flex items-center gap-6">
@@ -24,7 +36,8 @@ export function Navbar({
             id="brand-logo-btn"
             type="button"
             onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-3 text-left focus:outline-hidden group"
+            className="flex items-center gap-3 text-left group focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-xl p-1"
+            aria-label="CampusFix Home - University Facility Portal"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-200">
               <svg
@@ -32,6 +45,7 @@ export function Navbar({
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -65,9 +79,9 @@ export function Navbar({
               id="nav-link-dashboard"
               type="button"
               onClick={() => setActiveTab('dashboard')}
-              className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-600 ${
                 activeTab === 'dashboard'
-                  ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300'
+                  ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300 font-semibold'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
@@ -77,9 +91,9 @@ export function Navbar({
               id="nav-link-complaints"
               type="button"
               onClick={() => setActiveTab('list')}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-600 ${
                 activeTab === 'list'
-                  ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300'
+                  ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300 font-semibold'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
@@ -92,9 +106,9 @@ export function Navbar({
               id="nav-link-submit-tab"
               type="button"
               onClick={() => setActiveTab('submit')}
-              className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-600 ${
                 activeTab === 'submit'
-                  ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300'
+                  ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300 font-semibold'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
@@ -110,13 +124,14 @@ export function Navbar({
             id="nav-btn-report-issue"
             type="button"
             onClick={onOpenSubmitModal}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-600/20 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transition-all duration-200 active:scale-95"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-600/20 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-all min-h-[40px]"
           >
             <svg
               className="h-4 w-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -143,11 +158,12 @@ export function Navbar({
             id="mobile-menu-toggle-btn"
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Toggle Navigation Menu"
+            className="rounded-xl p-2.5 text-slate-600 hover:bg-slate-100 md:hidden dark:text-slate-400 dark:hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-blue-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-drawer"
           >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               {mobileMenuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -158,60 +174,72 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer Backdrop & Menu */}
       {mobileMenuOpen && (
-        <div className="border-b border-slate-200 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-900 animate-in slide-in-from-top-2">
-          <nav className="flex flex-col gap-1.5">
-            <button
-              id="mobile-nav-dashboard"
-              type="button"
-              onClick={() => {
-                setActiveTab('dashboard');
-                setMobileMenuOpen(false);
-              }}
-              className={`rounded-lg px-3 py-2 text-left text-sm font-medium ${
-                activeTab === 'dashboard'
-                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              Dashboard Overview
-            </button>
-            <button
-              id="mobile-nav-complaints"
-              type="button"
-              onClick={() => {
-                setActiveTab('list');
-                setMobileMenuOpen(false);
-              }}
-              className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium ${
-                activeTab === 'list'
-                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <span>Complaints List</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                {totalTicketsCount}
-              </span>
-            </button>
-            <button
-              id="mobile-nav-submit"
-              type="button"
-              onClick={() => {
-                setActiveTab('submit');
-                setMobileMenuOpen(false);
-              }}
-              className={`rounded-lg px-3 py-2 text-left text-sm font-medium ${
-                activeTab === 'submit'
-                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              Submit Complaint
-            </button>
-          </nav>
-        </div>
+        <>
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 top-16 z-30 bg-slate-900/40 backdrop-blur-xs md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          <div
+            id="mobile-navigation-drawer"
+            className="relative z-40 border-b border-slate-200 bg-white px-4 py-4 md:hidden dark:border-slate-800 dark:bg-slate-900 shadow-xl animate-in slide-in-from-top-2"
+          >
+            <nav className="flex flex-col gap-2" aria-label="Mobile Navigation">
+              <button
+                id="mobile-nav-dashboard"
+                type="button"
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  setMobileMenuOpen(false);
+                }}
+                className={`rounded-xl px-4 py-3 text-left text-sm font-medium min-h-[44px] flex items-center focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                  activeTab === 'dashboard'
+                    ? 'bg-blue-50 text-blue-700 font-semibold dark:bg-blue-950/60 dark:text-blue-300'
+                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                Dashboard Overview
+              </button>
+              <button
+                id="mobile-nav-complaints"
+                type="button"
+                onClick={() => {
+                  setActiveTab('list');
+                  setMobileMenuOpen(false);
+                }}
+                className={`flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-medium min-h-[44px] focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                  activeTab === 'list'
+                    ? 'bg-blue-50 text-blue-700 font-semibold dark:bg-blue-950/60 dark:text-blue-300'
+                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span>Complaints List</span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                  {totalTicketsCount}
+                </span>
+              </button>
+              <button
+                id="mobile-nav-submit"
+                type="button"
+                onClick={() => {
+                  setActiveTab('submit');
+                  setMobileMenuOpen(false);
+                }}
+                className={`rounded-xl px-4 py-3 text-left text-sm font-medium min-h-[44px] flex items-center focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                  activeTab === 'submit'
+                    ? 'bg-blue-50 text-blue-700 font-semibold dark:bg-blue-950/60 dark:text-blue-300'
+                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                Submit Complaint
+              </button>
+            </nav>
+          </div>
+        </>
       )}
     </header>
   );
