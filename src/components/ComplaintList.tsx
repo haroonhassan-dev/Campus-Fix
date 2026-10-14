@@ -23,23 +23,61 @@ export function ComplaintList({
   onOpenSubmitModal,
 }: ComplaintListProps) {
   if (isLoading) {
+    if (viewMode === 'list') {
+      return (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Loading complaints list"
+          className="space-y-3.5"
+        >
+          <span className="sr-only">Loading campus complaints...</span>
+          {[1, 2, 3, 4].map((n) => (
+            <div
+              key={n}
+              className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 animate-pulse dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div className="flex-1 space-y-2.5">
+                <div className="flex gap-2">
+                  <div className="h-4 w-16 rounded-md bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-4 w-28 rounded-md bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-4 w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
+                </div>
+                <div className="h-5 w-3/4 rounded-md bg-slate-200 dark:bg-slate-800" />
+                <div className="h-4 w-1/2 rounded-md bg-slate-200 dark:bg-slate-800" />
+              </div>
+              <div className="h-9 w-32 rounded-xl bg-slate-200 dark:bg-slate-800" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 py-6">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-label="Loading complaints grid"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 py-2"
+      >
+        <span className="sr-only">Loading campus complaints...</span>
         {[1, 2, 3, 4, 5, 6].map((n) => (
           <div
             key={n}
-            className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+            className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between"
           >
-            <div className="flex justify-between">
-              <div className="h-4 w-16 rounded-md bg-slate-200 dark:bg-slate-800" />
-              <div className="h-4 w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
+            <div>
+              <div className="flex justify-between">
+                <div className="h-4 w-16 rounded-md bg-slate-200 dark:bg-slate-800" />
+                <div className="h-4 w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
+              </div>
+              <div className="mt-4 h-5 w-3/4 rounded-md bg-slate-200 dark:bg-slate-800" />
+              <div className="mt-2.5 h-4 w-full rounded-md bg-slate-200 dark:bg-slate-800" />
+              <div className="mt-2 h-4 w-2/3 rounded-md bg-slate-200 dark:bg-slate-800" />
             </div>
-            <div className="mt-4 h-6 w-3/4 rounded-md bg-slate-200 dark:bg-slate-800" />
-            <div className="mt-2 h-4 w-full rounded-md bg-slate-200 dark:bg-slate-800" />
-            <div className="mt-2 h-4 w-2/3 rounded-md bg-slate-200 dark:bg-slate-800" />
-            <div className="mt-8 border-t border-slate-100 pt-4 dark:border-slate-800 flex justify-between">
-              <div className="h-8 w-24 rounded-lg bg-slate-200 dark:bg-slate-800" />
-              <div className="h-8 w-16 rounded-lg bg-slate-200 dark:bg-slate-800" />
+            <div className="border-t border-slate-100 pt-4 dark:border-slate-800 flex justify-between items-center">
+              <div className="h-8 w-28 rounded-xl bg-slate-200 dark:bg-slate-800" />
+              <div className="h-8 w-16 rounded-xl bg-slate-200 dark:bg-slate-800" />
             </div>
           </div>
         ))}
@@ -51,10 +89,12 @@ export function ComplaintList({
     return (
       <div
         id="empty-complaints-state"
-        className="my-10 flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-white/70 p-12 text-center dark:border-slate-800 dark:bg-slate-900/60"
+        role="region"
+        aria-label="No complaints found"
+        className="my-8 flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-white/70 p-8 sm:p-12 text-center dark:border-slate-800 dark:bg-slate-900/60"
       >
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
-          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -67,7 +107,7 @@ export function ComplaintList({
           No complaints match your criteria
         </h3>
         <p className="mt-1.5 max-w-md text-sm text-slate-500 dark:text-slate-400">
-          We couldn't find any complaints matching your active search keywords or category and status filters.
+          We could not find any complaints matching your active search keywords or category and status filters.
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -75,7 +115,7 @@ export function ComplaintList({
             id="btn-empty-reset-filters"
             type="button"
             onClick={onResetFilters}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 min-h-[44px]"
           >
             Clear Filters
           </button>
@@ -83,7 +123,7 @@ export function ComplaintList({
             id="btn-empty-submit-ticket"
             type="button"
             onClick={onOpenSubmitModal}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700"
+            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600 min-h-[44px]"
           >
             Submit New Ticket
           </button>
@@ -94,7 +134,7 @@ export function ComplaintList({
 
   if (viewMode === 'list') {
     return (
-      <div id="complaints-list-container" className="space-y-3.5">
+      <div id="complaints-list-container" className="space-y-3.5" role="feed" aria-label="Complaints feed">
         {complaints.map((complaint) => (
           <ComplaintCard
             key={complaint.id}
@@ -113,6 +153,8 @@ export function ComplaintList({
     <div
       id="complaints-grid-container"
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+      role="feed"
+      aria-label="Complaints grid"
     >
       {complaints.map((complaint) => (
         <ComplaintCard

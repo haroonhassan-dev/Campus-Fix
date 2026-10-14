@@ -43,9 +43,11 @@ export function ComplaintFilters({
   return (
     <div
       id="complaints-filter-toolbar"
+      role="search"
+      aria-label="Filter and search complaints"
       className="space-y-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
     >
-      {/* Top Row: Search Input + Sort Dropdown + View Mode */}
+      {/* Top Row: Search Input + Select Dropdowns + View Mode */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {/* Search Bar */}
         <div className="relative flex-1">
@@ -55,6 +57,7 @@ export function ComplaintFilters({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -66,36 +69,41 @@ export function ComplaintFilters({
           </div>
           <input
             id="filter-search-input"
-            type="text"
+            type="search"
             value={filters.search}
             onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
             placeholder="Search complaints by title, description, room, or ticket ID..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-blue-100 transition-all dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500"
+            aria-label="Search complaints by keyword, location, or ID"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-200 transition-all dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 min-h-[44px]"
           />
           {filters.search && (
             <button
               id="clear-search-btn"
               type="button"
               onClick={() => setFilters((prev) => ({ ...prev, search: '' }))}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              title="Clear search"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-600 dark:hover:text-slate-200 min-w-[36px] justify-center"
+              aria-label="Clear search input"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           )}
         </div>
 
-        {/* Sort & View Mode Switcher */}
+        {/* Dropdowns & View Mode Switcher */}
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {/* Category Dropdown */}
-          <div className="relative min-w-[170px] flex-1 sm:flex-initial">
+          <div className="relative min-w-[150px] flex-1 sm:flex-initial">
+            <label htmlFor="filter-category-select" className="sr-only">
+              Filter by Category
+            </label>
             <select
               id="filter-category-select"
               value={filters.category}
               onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              aria-label="Filter by category"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 min-h-[44px]"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -104,7 +112,7 @@ export function ComplaintFilters({
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -112,6 +120,9 @@ export function ComplaintFilters({
 
           {/* Priority Dropdown */}
           <div className="relative min-w-[130px] flex-1 sm:flex-initial">
+            <label htmlFor="filter-priority-select" className="sr-only">
+              Filter by Priority
+            </label>
             <select
               id="filter-priority-select"
               value={filters.priority}
@@ -121,7 +132,8 @@ export function ComplaintFilters({
                   priority: e.target.value as 'all' | ComplaintPriority,
                 }))
               }
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              aria-label="Filter by priority level"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 min-h-[44px]"
             >
               <option value="all">All Priorities</option>
               <option value="urgent">🔴 Urgent</option>
@@ -130,7 +142,7 @@ export function ComplaintFilters({
               <option value="low">🟢 Low</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -138,6 +150,9 @@ export function ComplaintFilters({
 
           {/* Sort By Dropdown */}
           <div className="relative min-w-[140px] flex-1 sm:flex-initial">
+            <label htmlFor="filter-sort-select" className="sr-only">
+              Sort Complaints By
+            </label>
             <select
               id="filter-sort-select"
               value={filters.sortBy}
@@ -147,7 +162,8 @@ export function ComplaintFilters({
                   sortBy: e.target.value as FilterState['sortBy'],
                 }))
               }
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              aria-label="Sort complaints by"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 min-h-[44px]"
             >
               <option value="newest">Sort: Newest</option>
               <option value="oldest">Sort: Oldest</option>
@@ -155,27 +171,28 @@ export function ComplaintFilters({
               <option value="upvotes">Sort: Most Upvoted</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
 
-          {/* View Mode Toggle: Grid vs List */}
-          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 dark:border-slate-700 dark:bg-slate-800">
+          {/* View Mode Switcher: Grid vs List */}
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 dark:border-slate-700 dark:bg-slate-800 shrink-0" role="group" aria-label="View display mode">
             <button
               id="view-mode-grid-btn"
               type="button"
+              aria-pressed={viewMode === 'grid'}
               onClick={() => setViewMode('grid')}
-              className={`rounded-lg p-1.5 transition-all ${
+              className={`rounded-lg p-2 transition-all min-h-[38px] min-w-[38px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-blue-600 ${
                 viewMode === 'grid'
                   ? 'bg-white text-blue-600 shadow-xs dark:bg-slate-700 dark:text-blue-400'
                   : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
               title="Grid View"
-              aria-label="Grid View"
+              aria-label="Switch to grid layout"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -187,16 +204,17 @@ export function ComplaintFilters({
             <button
               id="view-mode-list-btn"
               type="button"
+              aria-pressed={viewMode === 'list'}
               onClick={() => setViewMode('list')}
-              className={`rounded-lg p-1.5 transition-all ${
+              className={`rounded-lg p-2 transition-all min-h-[38px] min-w-[38px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-blue-600 ${
                 viewMode === 'list'
                   ? 'bg-white text-blue-600 shadow-xs dark:bg-slate-700 dark:text-blue-400'
                   : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
               title="List View"
-              aria-label="List View"
+              aria-label="Switch to list layout"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -209,10 +227,10 @@ export function ComplaintFilters({
         </div>
       </div>
 
-      {/* Bottom Row: Status Quick Tabs + Results Summary */}
+      {/* Bottom Row: Status Filter Pills + Results Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
         {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter complaints by status">
           {statusOptions.map((opt) => {
             const isActive = filters.status === opt.key;
             return (
@@ -220,8 +238,9 @@ export function ComplaintFilters({
                 key={opt.key}
                 id={`filter-status-tab-${opt.key}`}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() => setFilters((prev) => ({ ...prev, status: opt.key }))}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-blue-600 min-h-[36px] ${
                   isActive
                     ? 'bg-slate-900 text-white shadow-xs dark:bg-white dark:text-slate-900'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
@@ -229,7 +248,7 @@ export function ComplaintFilters({
               >
                 <span>{opt.label}</span>
                 <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
                     isActive
                       ? 'bg-slate-700 text-slate-100 dark:bg-slate-200 dark:text-slate-900'
                       : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
@@ -244,7 +263,7 @@ export function ComplaintFilters({
 
         {/* Counter & Clear Filters Action */}
         <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>
+          <span aria-live="polite">
             Showing <strong className="text-slate-800 dark:text-slate-200">{totalFilteredCount}</strong> of{' '}
             {totalUnfilteredCount} complaints
           </span>
@@ -254,9 +273,10 @@ export function ComplaintFilters({
               id="btn-reset-filters"
               type="button"
               onClick={onResetFilters}
-              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 focus-visible:ring-2 focus-visible:ring-blue-600 rounded px-1.5 py-1 min-h-[32px] dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              aria-label="Reset all search and filter settings"
             >
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
               <span>Reset filters</span>
