@@ -228,18 +228,161 @@ function nextComplaintId(complaints: Complaint[]): string {
 }
 
 /**
+ * Detects whether HTTP API mode is activated via the VITE_API_BASE_URL environment variable.
+ * When VITE_API_BASE_URL is absent or empty, the service uses localStorage persistence.
+ */
+export function isApiMode(): boolean {
+  const url = import.meta.env.VITE_API_BASE_URL;
+  return typeof url === 'string' && url.trim().length > 0;
+}
+
+function getApiBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_BASE_URL;
+  if (!raw || typeof raw !== 'string') return '';
+  return raw.trim().replace(/\/+$/, '');
+}
+
+function buildApiEndpoint(path: string): string {
+  const base = getApiBaseUrl();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (base.endsWith('/api') && normalizedPath.startsWith('/api/')) {
+    return `${base}${normalizedPath.slice(4)}`;
+  }
+  if (!base.endsWith('/api') && !normalizedPath.startsWith('/api/')) {
+    return `${base}/api${normalizedPath}`;
+  }
+  return `${base}${normalizedPath}`;
+}
+
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+    details?: unknown;
+  };
+  message?: string;
+}
+
+async function requestApi<T>(
+  url: string,
+  options: RequestInit,
+  validator: (data: unknown) => T
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, options);
+  } catch (netErr) {
+    const errorMsg = netErr instanceof Error ? netErr.message : String(netErr);
+    throw new Error(
+      `CampusFix API is unavailable (${errorMsg}). Please ensure the backend server is running.`,
+      { cause: netErr }
+    );
+  }
+
+  if (response.status === 404 && options.method === 'POST' && url.endsWith('/upvote')) {
+    return null as T;
+  }
+
+  if (!response.ok) {
+    let errorDetail = `HTTP ${response.status} ${response.statusText || 'Error'}`;
+    try {
+      const errJson = (await response.json()) as ApiErrorResponse;
+      if (errJson?.error?.message) {
+        errorDetail = errJson.error.message;
+      } else if (errJson?.message) {
+        errorDetail = errJson.message;
+      }
+    } catch {
+      // Response was not JSON
+    }
+    throw new Error(`API error: ${errorDetail}`);
+  }
+
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch (parseErr) {
+    throw new Error('API returned an invalid non-JSON response.', { cause: parseErr });
+  }
+
+  // Enforce agreed response contract: { "data": ... }
+  if (!json || typeof json !== 'object' || Array.isArray(json) || !('data' in json)) {
+    throw new Error(
+      'API returned a malformed response: expected an object containing a "data" property.'
+    );
+  }
+
+  const rawData = (json as { data: unknown }).data;
+
+  return validator(rawData);
+}
+
+function validateComplaintsArray(data: unknown): Complaint[] {
+  if (!Array.isArray(data)) {
+    throw new Error('API response expected an array of complaints in "data".');
+  }
+  const result: Complaint[] = [];
+  for (const item of data) {
+    const parsed = parseComplaint(item);
+    if (!parsed) {
+      throw new Error(`API returned an invalid complaint record: ${JSON.stringify(item)}`);
+    }
+    result.push(parsed);
+  }
+  return result;
+}
+
+function validateSingleComplaint(data: unknown): Complaint {
+  const parsed = parseComplaint(data);
+  if (!parsed) {
+    throw new Error(`API returned an invalid complaint record: ${JSON.stringify(data)}`);
+  }
+  return parsed;
+}
+
+/**
  * Fetch all complaints currently recorded.
+ * In HTTP mode (VITE_API_BASE_URL set), calls GET /api/complaints without artificial delay.
+ * In localStorage mode, reads browser cache with simulated delay.
  */
 export async function getComplaints(): Promise<Complaint[]> {
-  // Simulate brief network latency for realistic loading states
+  if (isApiMode()) {
+    return requestApi(
+      buildApiEndpoint('/complaints'),
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      },
+      validateComplaintsArray
+    );
+  }
+
+  // Simulate brief network latency for realistic loading states in localStorage mode
   await new Promise((resolve) => setTimeout(resolve, 150));
   return readStore();
 }
 
 /**
  * Add a new complaint to the system.
+ * In HTTP mode, calls POST /api/complaints without artificial delay.
+ * In localStorage mode, writes to browser cache with simulated delay.
  */
 export async function addComplaint(input: AddComplaintInput): Promise<Complaint> {
+  if (isApiMode()) {
+    return requestApi(
+      buildApiEndpoint('/complaints'),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(input),
+      },
+      validateSingleComplaint
+    );
+  }
+
   await new Promise((resolve) => setTimeout(resolve, 200));
 
   const complaints = readStore();
@@ -265,11 +408,28 @@ export async function addComplaint(input: AddComplaintInput): Promise<Complaint>
 
 /**
  * Update the status of an existing complaint ('pending' | 'in-progress' | 'resolved').
+ * In HTTP mode, calls PATCH /api/complaints/:id without artificial delay.
+ * In localStorage mode, updates browser cache with simulated delay.
  */
 export async function updateComplaintStatus(
   id: string,
   status: ComplaintStatus
 ): Promise<Complaint> {
+  if (isApiMode()) {
+    return requestApi(
+      buildApiEndpoint(`/complaints/${encodeURIComponent(id)}`),
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      },
+      validateSingleComplaint
+    );
+  }
+
   await new Promise((resolve) => setTimeout(resolve, 150));
 
   if (!STATUSES.includes(status)) {
@@ -294,9 +454,25 @@ export async function updateComplaintStatus(
 }
 
 /**
- * Toggle or increment upvote for student issues
+ * Toggle or increment upvote for student issues.
+ * In HTTP mode, calls POST /api/complaints/:id/upvote.
+ * In localStorage mode, increments in browser cache.
  */
-export function toggleUpvote(id: string): Complaint | null {
+export async function toggleUpvote(id: string): Promise<Complaint | null> {
+  if (isApiMode()) {
+    return requestApi(
+      buildApiEndpoint(`/complaints/${encodeURIComponent(id)}/upvote`),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      },
+      validateSingleComplaint
+    );
+  }
+
   const complaints = readStore();
   const index = complaints.findIndex((c) => c.id === id);
   if (index === -1) return null;

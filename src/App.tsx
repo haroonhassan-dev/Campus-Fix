@@ -11,6 +11,7 @@ import {
   addComplaint,
   updateComplaintStatus,
   toggleUpvote,
+  isApiMode,
 } from './services/complaintService';
 
 import Navbar from './components/Navbar';
@@ -150,9 +151,9 @@ export function App() {
   };
 
   // Handle upvoting
-  const handleUpvote = (id: string) => {
+  const handleUpvote = async (id: string) => {
     try {
-      const updated = toggleUpvote(id);
+      const updated = await toggleUpvote(id);
       if (updated) {
         setComplaints((prev) =>
           prev.map((item) => (item.id === id ? updated : item))
@@ -162,7 +163,8 @@ export function App() {
         }
       }
     } catch (err) {
-      console.error('Upvote error:', err);
+      const msg = err instanceof Error ? err.message : 'Could not register upvote';
+      showToast(msg, 'error');
     }
   };
 
@@ -492,7 +494,7 @@ export function App() {
           <div className="flex items-center gap-4 text-slate-400">
             <span>CampusFix System</span>
             <span>•</span>
-            <span>Browser Local Storage</span>
+            <span>{isApiMode() ? 'REST API Backend' : 'Browser Local Storage'}</span>
           </div>
         </div>
       </footer>

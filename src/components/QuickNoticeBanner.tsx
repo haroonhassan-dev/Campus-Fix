@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { isApiMode } from '../services/complaintService';
 
 /**
- * Notice banner explaining browser-local storage persistence.
- * Data is saved locally in the user's browser and is not shared across devices.
+ * Notice banner explaining the active persistence mode (HTTP API or browser-local storage).
  */
 export function QuickNoticeBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const inApiMode = isApiMode();
 
   if (dismissed) return null;
 
@@ -13,7 +14,7 @@ export function QuickNoticeBanner() {
     <div
       id="dev-mode-notice-banner"
       role="region"
-      aria-label="Local storage persistence notice"
+      aria-label={inApiMode ? 'API persistence notice' : 'Local storage persistence notice'}
       className="relative overflow-hidden border-b border-indigo-100 bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-purple-50/80 px-4 py-3 text-xs sm:text-sm text-indigo-950 backdrop-blur-sm"
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
@@ -35,9 +36,11 @@ export function QuickNoticeBanner() {
           </span>
           <p className="leading-snug">
             <strong className="font-semibold text-indigo-900">
-              Local Storage Mode:
+              {inApiMode ? 'REST API Mode Enabled:' : 'Local Storage Mode:'}
             </strong>{' '}
-            Complaints and status updates are saved locally in your browser and persist across page reloads. Data is stored on this device and is not shared across other devices or browsers.
+            {inApiMode
+              ? 'CampusFix is configured to use the REST API service. Network requests are sent to the configured API backend.'
+              : 'Complaints and status updates are saved locally in your browser and persist across page reloads. Data is stored on this device and is not shared across other devices or browsers.'}
           </p>
         </div>
 
