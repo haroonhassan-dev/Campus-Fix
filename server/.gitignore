@@ -1,0 +1,9 @@
+node_modules/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+
+# Runtime data written by the API
+data/

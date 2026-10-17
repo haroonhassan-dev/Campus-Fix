@@ -1,0 +1,26 @@
+{
+  "name": "campus-fix-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CampusFix practice REST API (Express + local JSON file)",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch src/index.ts",
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "smoke": "node scripts/smoke.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.2"
+  }
+}
