@@ -1,0 +1,625 @@
+{
+  "info": {
+    "_postman_id": "c1f7a09e-8c42-4b21-9945-87ab3e9f42d1",
+    "name": "CampusFix REST API Test Suite",
+    "description": "Comprehensive QA test collection for the CampusFix University Complaint Management System REST API.\n\nTarget Service: http://localhost:3001/api\n\nContracts Enforced:\n- GET /api/complaints -> 200 { data: Complaint[] }\n- POST /api/complaints -> 201 { data: Complaint }\n- PATCH /api/complaints/:id -> 200 { data: Complaint }\n- POST /api/complaints/:id/upvote -> 200 { data: Complaint }\n- Errors -> { error: { code: string, message: string, details?: unknown } }",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api",
+      "type": "string",
+      "description": "Base URL of the CampusFix backend API"
+    },
+    {
+      "key": "createdComplaintId",
+      "value": "CF-1001",
+      "type": "string",
+      "description": "Dynamically populated during POST test, reused in PATCH and Upvote tests"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Happy Path Endpoints",
+      "item": [
+        {
+          "name": "GET /api/complaints - Fetch All Complaints",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response conforms to { data: Complaint[] } contract\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('object');",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Complaints have valid schema fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.length > 0) {",
+                  "        var sample = jsonData.data[0];",
+                  "        pm.expect(sample).to.have.property('id').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('title').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('description').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('category').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('priority').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('status').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('location').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('submittedBy').that.is.a('string');",
+                  "        pm.expect(sample).to.have.property('createdAt').that.is.a('string');",
+                  "        pm.expect(['pending', 'in-progress', 'resolved']).to.include(sample.status);",
+                  "        pm.expect(['low', 'medium', 'high', 'urgent']).to.include(sample.priority);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "Retrieves the full list of university facility and maintenance complaints."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/complaints - Create New Complaint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response conforms to { data: Complaint } envelope\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('object');",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    var complaint = jsonData.data;",
+                  "    pm.expect(complaint).to.have.property('id').that.is.a('string');",
+                  "    pm.expect(complaint.id).to.match(/^CF-\\d+$/);",
+                  "    pm.expect(complaint.title).to.eql(\"Ceiling AC water leakage in CS Lab 204\");",
+                  "    pm.expect(complaint.priority).to.eql(\"high\");",
+                  "    pm.expect(complaint.status).to.eql(\"pending\");",
+                  "    pm.expect(complaint.location).to.eql(\"Computer Science Block, 2nd Floor, Lab 204\");",
+                  "    pm.expect(complaint.upvotes).to.be.at.least(1);",
+                  "    pm.expect(complaint).to.have.property('createdAt').that.is.a('string');",
+                  "    ",
+                  "    // Persist created ID for subsequent tests",
+                  "    pm.collectionVariables.set(\"createdComplaintId\", complaint.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ceiling AC water leakage in CS Lab 204\",\n  \"description\": \"Continuous water droplet leak onto desk row 3 from ceiling AC unit. Poses hazard to computer hardware.\",\n  \"category\": \"Facilities & Maintenance\",\n  \"priority\": \"high\",\n  \"location\": \"Computer Science Block, 2nd Floor, Lab 204\",\n  \"submittedBy\": \"QA Automation Suite\",\n  \"studentId\": \"QA-2026-001\",\n  \"contactEmail\": \"qa.suite@campus.edu\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "Submits a new complaint into the system. Stores the returned ID into collection variable `createdComplaintId`."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /api/complaints/:id - Update Complaint Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Complaint status successfully updated to in-progress\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    var complaint = jsonData.data;",
+                  "    var expectedId = pm.collectionVariables.get(\"createdComplaintId\");",
+                  "    pm.expect(complaint.id).to.eql(expectedId);",
+                  "    pm.expect(complaint.status).to.eql(\"in-progress\");",
+                  "    pm.expect(complaint).to.have.property('updatedAt').that.is.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in-progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{createdComplaintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{createdComplaintId}}"
+              ]
+            },
+            "description": "Transitions the complaint status from 'pending' to 'in-progress'."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/complaints/:id/upvote - Upvote Complaint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Upvote counter is incremented\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    var complaint = jsonData.data;",
+                  "    var expectedId = pm.collectionVariables.get(\"createdComplaintId\");",
+                  "    pm.expect(complaint.id).to.eql(expectedId);",
+                  "    pm.expect(complaint).to.have.property('upvotes').that.is.a('number');",
+                  "    pm.expect(complaint.upvotes).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{createdComplaintId}}/upvote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{createdComplaintId}}",
+                "upvote"
+              ]
+            },
+            "description": "Increments the student upvote tally for an existing complaint ticket."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Negative & Validation Test Cases",
+      "item": [
+        {
+          "name": "POST /api/complaints - Missing Title (Validation Failure)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Response conforms to { error: { code, message } } envelope\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('object');",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code').that.is.a('string');",
+                  "    pm.expect(jsonData.error).to.have.property('message').that.is.a('string');",
+                  "    pm.expect(jsonData.error.message.toLowerCase()).to.include(\"title\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Submitting ticket without a required title field.\",\n  \"category\": \"Facilities & Maintenance\",\n  \"priority\": \"medium\",\n  \"location\": \"Main Library\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "Expects 400 Bad Request when title is absent or empty."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/complaints - Invalid Priority (Validation Failure)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Response returns structured error for invalid priority\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "    pm.expect(jsonData.error).to.have.property('message');",
+                  "    pm.expect(jsonData.error.message.toLowerCase()).to.include(\"priority\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Broken laboratory door lock\",\n  \"description\": \"Keycard scanner is not recognizing cards.\",\n  \"category\": \"Campus Safety\",\n  \"priority\": \"super-critical-urgent\",\n  \"location\": \"Physics Lab 1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "Expects 400 Bad Request when priority is outside 'low' | 'medium' | 'high' | 'urgent'."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /api/complaints/:id - Invalid Status (Validation Failure)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Response returns error object explaining invalid status\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "    pm.expect(jsonData.error.message.toLowerCase()).to.include(\"status\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"archived_invalid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{createdComplaintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{createdComplaintId}}"
+              ]
+            },
+            "description": "Expects 400 Bad Request when status is outside 'pending' | 'in-progress' | 'resolved'."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH /api/complaints/:id - Unknown Complaint ID (404 Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response indicates complaint not found\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "    pm.expect(jsonData.error.message).to.include(\"CF-99999\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"resolved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/CF-99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "CF-99999"
+              ]
+            },
+            "description": "Expects 404 Not Found when attempting to patch a non-existent complaint ID."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/complaints/:id/upvote - Unknown Complaint ID (404 Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response specifies non-existent ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "    pm.expect(jsonData.error.message).to.include(\"CF-99999\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/CF-99999/upvote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "CF-99999",
+                "upvote"
+              ]
+            },
+            "description": "Expects 404 Not Found when upvoting an ID that does not exist in the database."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/complaints - Malformed JSON Body (Syntax Error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns structured error for invalid JSON\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Broken window\",\n  \"description\": "
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "Expects 400 Bad Request when an unparseable or broken JSON payload is submitted."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/complaints - Server Unavailable Simulation Verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// In automated environments where the server is intentionally shut down,",
+                  "// Postman/Newman encounters connection refusal (ECONNREFUSED).",
+                  "// When testing against a gateway/proxy or mock 503 responder:",
+                  "if (pm.response) {",
+                  "    pm.test(\"Status code is 503 or 500 when server/store unavailable\", function () {",
+                  "        pm.expect([500, 502, 503, 504]).to.include(pm.response.code);",
+                  "    });",
+                  "    pm.test(\"Error envelope returned\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData).to.have.property('error');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "Validates server availability handling. If server process is offline, runner reports connection failure."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
